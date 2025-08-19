@@ -11,6 +11,7 @@
     "dev:backend": "cd backend && nodemon ./index.ts"
   },
   "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-dialog": "^1.1.15",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -33,7 +34,7 @@
     "@types/next-auth": "^3.15.0",
     "@types/node": "^20",
     "@types/pg": "^8.15.5",
-    "@types/react": "^19",
+    "@types/react": "^19.1.10",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
