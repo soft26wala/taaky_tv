@@ -38,17 +38,5 @@ app.post("/api/save-user", async (req:Request, res:Response) => {
   }
 }); 
 
-app.get("/api/get-users", async (req: Request, res: Response) => {
-  try {
-    const result = await pool.query("SELECT * FROM users");
-    if (result.rows.length === 0) {
-      return res.status(400).json({ success: false, message: "No users found" });
-    }
-    res.json(result.rows);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: "Database error" });
-  }
-});
 
 app.listen(8001, () => console.log("Server running on port 8001"));

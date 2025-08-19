@@ -3,13 +3,13 @@ import { Server as NetServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import type { Socket } from "socket.io";
 
-const ioHandler = (req: NextRequest) => {
+const ioHandler = () => {
   return new Response("Socket server running", { status: 200 });
 };
 
 export const GET = ioHandler;
 
-const ioMap = new Map();
+// const ioMap = new Map();
 
 declare global {
   var io: SocketIOServer | undefined;
