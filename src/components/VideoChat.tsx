@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { socket } from "@/lib/socket";
+import  socket  from "@/lib/socket";
 import SkipButton from "./SkipButton";
 
 export default function VideoChat() {
