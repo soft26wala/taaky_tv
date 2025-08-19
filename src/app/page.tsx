@@ -1,103 +1,294 @@
-import Image from "next/image";
+"use client";
+
+import { Button } from "@/components/ui/button";
+import  socket  from "@/lib/socket";
+import { MessageSquare, Phone, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+// import socket from "../utils/socket";
+
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [messages, setMessages] = useState<string[]>([]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+   const [isStarted, setIsStarted] = useState(false);
+
+  // 🔹 On Mount
+  useEffect(() => {
+    socket.on("chat", (msg: string) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    socket.on("typing", (isTyping: boolean) => {
+      setTyping(isTyping);
+    });
+
+    // WebRTC
+    socket.on("video-offer", async (offer) => {
+      if (!pcRef.current) createPeerConnection();
+
+      await pcRef.current?.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pcRef.current?.createAnswer();
+      await pcRef.current?.setLocalDescription(answer!);
+      socket.emit("video-answer", answer);
+    });
+
+    socket.on("video-answer", async (answer) => {
+      await pcRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    socket.on("ice-candidate", async (candidate) => {
+      try {
+        await pcRef.current?.addIceCandidate(candidate);
+      } catch (err) {
+        console.error("ICE error", err);
+      }
+    });
+
+    return () => {
+      socket.off("chat");
+      socket.off("typing");
+      socket.off("video-offer");
+      socket.off("video-answer");
+      socket.off("ice-candidate");
+    };
+  }, []);
+
+  // 🔹 Peer Connection create
+  const createPeerConnection = () => {
+    const pc = new RTCPeerConnection();
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) socket.emit("ice-candidate", e.candidate);
+    };
+
+    pc.ontrack = (e) => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = e.streams[0];
+      } 
+    };
+
+    pcRef.current = pc;
+  };
+
+  // 🔹 Start Video
+  const startVideo = async () => {
+     setIsStarted(true);
+    if (!pcRef.current) createPeerConnection();
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = stream;
+    }
+    stream.getTracks().forEach((track) => {
+      pcRef.current?.addTrack(track, stream);
+    });
+
+    const offer = await pcRef.current?.createOffer();
+    await pcRef.current?.setLocalDescription(offer!);
+    socket.emit("video-offer", offer);
+  };
+
+
+    const stopVideo = () => {
+    setIsStarted(false);
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    if (localVideoRef.current && localVideoRef.current.srcObject) {
+      (localVideoRef.current.srcObject as MediaStream)
+
+    // 🔴 TODO: Add stop logic
+        .getTracks()
+        .forEach((track) => track.stop());
+      localVideoRef.current.srcObject = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+
+
+    
+    const serversms = "Server: User has stopped the video call. ";
+    // Send message to server
+    socket.emit("chat", serversms);
+    setMessages((prev) => [...prev, `Server: ${serversms}`]);
+    setMessages([]); 
+    setTyping(false); // Stop typing indicator
+  };
+
+  // 🔹 Send message
+  const sendMessage = () => {
+    if (input.trim()) {
+      socket.emit("chat", input);
+      setMessages((prev) => [...prev, `You: ${input}`]);
+      setInput("");
+      setTyping(false); // Stop typing indicator
+    }
+  };
+
+
+  const skipUser = () => {
+  // 1. Peer connection बंद करो
+  if (pcRef.current) {
+    pcRef.current.close();
+    pcRef.current = null;
+  }
+
+  // 2. Local stream बंद करो
+  if (localVideoRef.current?.srcObject) {
+    const tracks = (localVideoRef.current.srcObject as MediaStream).getTracks();
+    tracks.forEach((track) => track.stop());
+    localVideoRef.current.srcObject = null;
+  }
+
+  if (remoteVideoRef.current?.srcObject) {
+    const tracks = (remoteVideoRef.current.srcObject as MediaStream).getTracks();
+    tracks.forEach((track) => track.stop());
+    remoteVideoRef.current.srcObject = null;
+  }
+
+  // 3. Backend को बोला → नया user find कर
+  socket.emit("skip");
+   setMessages([]);
+  // 4. Auto startVideo फिर से call कर सकते हो
+  startVideo();
+};
+
+
+// ✅ function: current call cleanup
+  const endCurrentCall = () => {
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    if (localVideoRef.current && localVideoRef.current.srcObject) {
+      (localVideoRef.current.srcObject as MediaStream)
+        .getTracks()
+        .forEach((track) => track.stop());
+      localVideoRef.current.srcObject = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+  };
+
+
+useEffect(() => {
+  socket.on("skip", () => {
+    console.log("Partner skipped, auto skipping...");
+
+    // apna UI reset kar do
+    endCurrentCall();
+
+    // fir new stranger ke liye wait karna
+    createPeerConnection();
+  });
+
+  return () => {
+    socket.off("skip");
+  };
+}, []);
+
+
+  return (
+    <main className="flex h-screen bg-background text-foreground flex-col xl:flex-row">
+      {/* 🔹 Video Section (Left) */}
+      <div className="flex-1 flex xl:flex-col xl:items-center justify-center bg-black relative h-3/4 xl:h-full">
+        <div className="grid xl:grid-cols-2  gap-2 w-full h-full xl:p-2 grid-row-2 " >
+          <video
+            ref={localVideoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-full h-full object-cover rounded-xl bg-gray-800"
+          />
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className="w-full h-full object-cover rounded-xl bg-gray-800"
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        {/* Controls */}
+        <div className="absolute bottom-4 flex gap-4">
+          {!isStarted ? (
+            <Button
+              onClick={startVideo}
+              size="lg"
+              className="rounded-full px-6 py-3 text-lg font-bold shadow-lg bg-green-600 hover:bg-green-700"
+            >
+              <Phone className="mr-2 h-5 w-5" /> Start
+            </Button>
+          ) : (
+            <Button
+              onClick={stopVideo}
+              size="lg"
+              variant="destructive"
+              className="rounded-full px-6 py-3 text-lg font-bold shadow-lg bg-red-500 hover:bg-red-600"
+            >
+              <Phone className="mr-2 h-5 w-5" /> Stop
+            </Button>
+          )}
+
+
+          <Button
+  onClick={skipUser}
+  size="lg"
+  className="rounded-full px-6 py-3 text-lg font-bold shadow-lg bg-yellow-600 hover:bg-yellow-700"
+>
+  Skip
+</Button>
+        </div>
+      </div>
+
+      {/* 🔹 Chat Section (Right) */}
+      <div className="xl:border-l flex flex-col bg-white dark:bg-zinc-900 h-1/4 xl:h-full w-full xl:w-[300px] 2xl:w-[400px]">
+        <div className="flex items-center gap-2 px-4 py-3 xl:border-b font-bold text-lg">
+          <MessageSquare className="h-5 w-5" /> Chat
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={`p-2 rounded-lg max-w-[80%] ${
+                msg.startsWith("You:")
+                  ? "bg-blue-600 text-white self-end ml-auto"
+                  : "bg-gray-200 dark:bg-zinc-800"
+              }`}
+            >
+              {msg}
+            </div>
+          ))}
+          {typing && (
+            <div className="italic text-gray-500">Stranger is typing...</div>
+          )}
+        </div>
+
+        {/* Input */}
+        <div className="flex gap-2 p-3 border-t">
+          <input
+            className="flex-1 border rounded-lg px-3 py-2 text-sm bg-background"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setTyping(e.target.value.length > 0);
+            }}
+            placeholder="Type a message..."
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <Button onClick={sendMessage} className="px-4">
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </main>
   );
 }
