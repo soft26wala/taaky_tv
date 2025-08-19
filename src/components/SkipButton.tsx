@@ -1,5 +1,5 @@
 "use client";
-import { socket } from "@/lib/socket";
+import socket from "@/lib/socket";
 
 export default function SkipButton() {
   return (

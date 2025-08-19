@@ -1,7 +1,8 @@
-import { NextRequest } from "next/server";
+// import { NextRequest } from "next/server";
 import { Server as NetServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import type { Socket } from "socket.io";
+import { createServer } from "http";
 
 const ioHandler = () => {
   return new Response("Socket server running", { status: 200 });
@@ -16,7 +17,8 @@ declare global {
 }
 
 if (!global.io) {
-  const httpServer: NetServer = (require("http").createServer());
+  // const httpServer: NetServer = (require("http").createServer());
+  const httpServer: NetServer = createServer();
   const io = new SocketIOServer(httpServer, {
     cors: { origin: "*" },
   });
