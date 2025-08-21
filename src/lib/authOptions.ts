@@ -19,16 +19,16 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
   },
  
-  //  callbacks: {
-  //       async signIn({ user, account, profile }) {
-  //         // Optional: Perform actions after successful sign-in
-  //         return true; // Allow sign-in
-  //       },
-  //       async redirect({ url, baseUrl }) {
-  //         // Redirect logic after sign-in
-  //         // Example: Redirect to a dashboard page after successful login
-  //         return baseUrl + "/call"; 
-  //       },
-  //     },
+   callbacks: {
+        async signIn({ user, account, profile }) {
+          // Optional: Perform actions after successful sign-in
+          return true; // Allow sign-in
+        },
+        async redirect({ url, baseUrl }) {
+          // Redirect logic after sign-in
+          // Example: Redirect to a dashboard page after successful login
+          return baseUrl + "/"; 
+        },
+      },
  
 };
