@@ -1,7 +1,8 @@
 import { io } from "socket.io-client";
 
 // Connect to server
-const socket = io("http://localhost:8001", {
+const socket = io("https://taaky-tv-api-1.onrender.com/", {
+// const socket = io("http://localhost:8001", {
   transports: ["websocket"],
 });
 
