@@ -119,7 +119,8 @@ export default function Home() {
     socket.emit("chat", serversms);
     setMessages((prev) => [...prev, `Server: ${serversms}`]);
     setMessages([]); 
-    setTyping(false); // Stop typing indicator
+    setTyping(false); // Stop typing indicator'
+    skipUser();
   };
 
   // 🔹 Send message
@@ -206,13 +207,13 @@ useEffect(() => {
             autoPlay
             muted
             playsInline
-            className="w-full h-full object-cover rounded-xl bg-gray-800"
+            className="w-full xl:h-full object-cover rounded-xl bg-gray-800 h-3/3"
           />
           <video
             ref={remoteVideoRef}
             autoPlay
             playsInline
-            className="w-full h-full object-cover rounded-xl bg-gray-800"
+            className="w-full xl:h-full object-cover rounded-xl bg-gray-800 h-3/3"
           />
         </div>
 
@@ -249,7 +250,7 @@ useEffect(() => {
       </div>
 
       {/* 🔹 Chat Section (Right) */}
-      <div className="xl:border-l flex flex-col bg-white dark:bg-zinc-900 h-1/4 xl:h-full w-full xl:w-[300px] 2xl:w-[400px]">
+      <div className="xl:border-l flex flex-col bg-white dark:bg-zinc-900 h-1/4 xl:h-full w-[90%] xl:w-[300px] 2xl:w-[400px]">
         <div className="flex items-center gap-2 px-4 py-3 xl:border-b font-bold text-lg">
           <MessageSquare className="h-5 w-5" /> Chat
         </div>
